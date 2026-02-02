@@ -132,18 +132,13 @@ function RoutePage() {
   // ref az utolsó API kérés azonosításához
   const lastRequestIdRef = useRef<number>(0);
 
-  const isManualNavigationActive = !!(
-    navStart ||
-    navEnd ||
-    navIntermediates.length > 0
+  const isManualNavigationActive = Boolean(
+    navStart || navEnd || navIntermediates.length > 0,
   );
 
   useEffect(() => {
-    isNavigationActiveRef.current = !!(
-      selectionMode ||
-      navStart ||
-      navEnd ||
-      navIntermediates.length > 0
+    isNavigationActiveRef.current = Boolean(
+      selectionMode || navStart || navEnd || navIntermediates.length > 0,
     );
   }, [selectionMode, navStart, navEnd, navIntermediates]);
 
