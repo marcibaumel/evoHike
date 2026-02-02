@@ -4,10 +4,10 @@ import { Trail } from '../models/Trail';
 
 interface TrailCardProps {
   trail: Trail;
-  onSelect: (trailId: string) => void;
+  onPlan: (id: number) => void;
 }
 
-function TrailCard({ trail, onSelect }: TrailCardProps) {
+function TrailCard({ trail, onPlan }: TrailCardProps) {
   const { t } = useTranslation();
 
   return (
@@ -72,12 +72,21 @@ function TrailCard({ trail, onSelect }: TrailCardProps) {
               <span className="trail-card-placeholder-image">🖼️</span>
             )}
           </div>
-          <button
-            type="button"
-            className="trail-card-action-btn"
-            onClick={() => onSelect(trail.id)}>
-            {t('trail.button_text')}
-          </button>
+
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              width: '100%',
+            }}>
+            <button
+              type="button"
+              className="trail-card-action-btn"
+              onClick={() => onPlan(Number(trail.id))}>
+              {t('trail.button_text')}
+            </button>
+          </div>
         </div>
       </div>
     </div>

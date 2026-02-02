@@ -140,5 +140,26 @@
     "search_title": "Útvonal Kereső",
     "filter": "Szűrés",
     "difficulty_level": "Nehézségi szint"
+  },
+  "plan": {
+    "title": "Túra Tervezése",
+    "start_date": "Kezdés",
+    "end_date": "Befejezés",
+    "checklist_title": "Mit viszel magaddal?",
+    "save": "Mentés",
+    "saving": "Mentés...",
+    "cancel": "Mégse",
+    "success": "Sikeres mentés!",
+    "error_save": "Hiba a mentésnél.",
+    "error_date": "A dátum nem megfelelő.",
+    "error_past_date": "A kezdő dátum nem lehet múltbeli."
+  },
+  "checklist": {
+    "water": "Megfelelő mennyiségű víz (1.5L+)",
+    "raincoat": "Esőkabát / Váltóruha",
+    "phone": "Töltött telefon + Powerbank",
+    "map": "Térkép (Offline is) / GPS",
+    "first_aid": "Elsősegély csomag",
+    "food": "Élelem / Energiaszelet"
   }
 }

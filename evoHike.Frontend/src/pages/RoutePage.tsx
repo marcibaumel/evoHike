@@ -41,6 +41,7 @@ import RouteEditorPanel from '../components/RouteEditorPanel';
 import { MdDelete } from 'react-icons/md';
 import TrailListPanel from '../components/TrailListPanel';
 import { calculateGeoJsonLength } from '../utils/geoUtils';
+import PlanHikeModal from '../components/PlanHikeModel';
 
 const geojson = routeData as FeatureCollection;
 
@@ -102,6 +103,11 @@ function RoutePage() {
   } | null>(null);
   // a kiválasztott túra adatai
   const [selectedTrail, setSelectedTrail] = useState<Trail | null>(null);
+
+  const [planningTrail, setPlanningTrail] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
 
   // navigációs kiválasztási mód
   const [selectionMode, setSelectionMode] = useState<
@@ -170,7 +176,9 @@ function RoutePage() {
             const trailId = feature.properties?.id;
 
             if (trailId) {
-              const foundTrail = mockTrails.find((t) => t.id === trailId);
+              const foundTrail = mockTrails.find(
+                (t) => String(t.id) === String(trailId),
+              );
               if (foundTrail) {
                 setSelectedTrail(foundTrail);
               }
@@ -208,7 +216,7 @@ function RoutePage() {
       setSelectedTrail(null);
       setPois([]);
     }
-  }, [contextMenu, uploadedGpxGeoJson]);
+  }, [contextMenu, uploadedGpxGeoJson, t]);
 
   const handleNavTo = useCallback(() => {
     if (uploadedGpxGeoJson) {
@@ -221,7 +229,7 @@ function RoutePage() {
       setSelectedTrail(null);
       setPois([]);
     }
-  }, [contextMenu, uploadedGpxGeoJson]);
+  }, [contextMenu, uploadedGpxGeoJson, t]);
 
   const handleAddWaypoint = useCallback(() => {
     if (uploadedGpxGeoJson) {
@@ -237,7 +245,7 @@ function RoutePage() {
       setSelectedTrail(null);
       setPois([]);
     }
-  }, [contextMenu, uploadedGpxGeoJson]);
+  }, [contextMenu, uploadedGpxGeoJson, t]);
 
   const handleClearNav = useCallback(() => {
     setNavStart(null);
@@ -297,14 +305,16 @@ function RoutePage() {
         setSelectionMode(null);
       }
     },
-    [selectionMode, uploadedGpxGeoJson, contextMenu],
+    [selectionMode, uploadedGpxGeoJson, contextMenu, t],
   );
 
   // kártya gombjának kezelése
   const handleTrailCardSelect = useCallback(
     (trailId: string) => {
       const feature = geojson.features.find(
-        (f) => f.properties?.id === trailId && f.geometry.type === 'LineString',
+        (f) =>
+          String(f.properties?.id) === String(trailId) &&
+          f.geometry.type === 'LineString',
       );
 
       if (feature && feature.geometry.type === 'LineString') {
@@ -314,7 +324,9 @@ function RoutePage() {
         handleRouteSelect(coordinates);
 
         // kiválasztott túra beállítása
-        const foundTrail = mockTrails.find((t) => t.id === trailId);
+        const foundTrail = mockTrails.find(
+          (t) => String(t.id) === String(trailId),
+        );
         if (foundTrail) setSelectedTrail(foundTrail);
 
         // térkép mozgatása
@@ -350,7 +362,7 @@ function RoutePage() {
     if (!selectedTrail) return null;
 
     const feature = geojson.features.find(
-      (f) => f.properties?.id === selectedTrail.id,
+      (f) => String(f.properties?.id) === String(selectedTrail.id),
     );
 
     if (feature) {
@@ -657,10 +669,20 @@ function RoutePage() {
           <TrailCard
             key={trail.id}
             trail={trail}
-            onSelect={handleTrailCardSelect}
+            onPlan={(id) =>
+              setPlanningTrail({ id: Number(id), name: trail.name })
+            }
           />
         ))}
       </div>
+
+      {planningTrail !== null && (
+        <PlanHikeModal
+          routeId={planningTrail.id}
+          trailName={planningTrail.name}
+          onClose={() => setPlanningTrail(null)}
+        />
+      )}
     </div>
   );
 }
