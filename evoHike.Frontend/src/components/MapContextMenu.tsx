@@ -1,5 +1,10 @@
 import React from 'react';
-import { MdLocationOn, MdFlag, MdDelete, MdAddLocation } from 'react-icons/md';
+import {
+  MapPinIcon,
+  FlagIcon,
+  TrashIcon,
+  MapPinPlusIcon,
+} from '@phosphor-icons/react';
 import '../styles/RoutPageStyles.css';
 import { useTranslation } from 'react-i18next';
 
@@ -41,7 +46,10 @@ export default function MapContextMenu({
         onKeyDown={(e) => handleKeyDown(e, onNavFrom)}
         role="menuitem"
         tabIndex={0}>
-        <MdLocationOn style={{ marginRight: '8px', color: '#5cb85c' }} />{' '}
+        <MapPinIcon
+          size={20}
+          style={{ marginRight: '8px', color: '#5cb85c' }}
+        />{' '}
         {t('routePage.navFrom')}
       </div>
       {/* cél gomb piros zászlóval */}
@@ -51,7 +59,7 @@ export default function MapContextMenu({
         onKeyDown={(e) => handleKeyDown(e, onNavTo)}
         role="menuitem"
         tabIndex={0}>
-        <MdFlag style={{ marginRight: '8px', color: '#d9534f' }} />{' '}
+        <FlagIcon size={20} style={{ marginRight: '8px', color: '#d9534f' }} />{' '}
         {t('routePage.navTo')}
       </div>
       {/* köztes pont narancs ikonnal */}
@@ -61,7 +69,10 @@ export default function MapContextMenu({
         onKeyDown={(e) => handleKeyDown(e, onAddWaypoint)}
         role="menuitem"
         tabIndex={0}>
-        <MdAddLocation style={{ marginRight: '8px', color: '#FF9800' }} />{' '}
+        <MapPinPlusIcon
+          size={20}
+          style={{ marginRight: '8px', color: '#FF9800' }}
+        />{' '}
         {t('routePage.addWaypoint')}
       </div>
       {/* törlés gomb szürke kukával */}
@@ -71,7 +82,7 @@ export default function MapContextMenu({
         onKeyDown={(e) => handleKeyDown(e, onClearNav)}
         role="menuitem"
         tabIndex={0}>
-        <MdDelete style={{ marginRight: '8px', color: '#777' }} />{' '}
+        <TrashIcon size={20} style={{ marginRight: '8px', color: '#777' }} />{' '}
         {t('routePage.clearNav')}
       </div>
     </div>

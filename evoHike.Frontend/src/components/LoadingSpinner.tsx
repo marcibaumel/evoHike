@@ -1,5 +1,4 @@
 import { HashLoader } from 'react-spinners';
-import '../styles/LoadingSpinner.css';
 
 const override = {
   display: 'block',

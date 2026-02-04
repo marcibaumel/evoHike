@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet-routing-machine';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
@@ -9,6 +9,7 @@ interface RoutingMachineProps {
   onRouteFound?: (summary: {
     totalDistance: number;
     totalTime: number;
+    coordinates: [number, number][];
   }) => void;
 }
 
@@ -17,6 +18,11 @@ export default function RoutingMachine({
   onRouteFound,
 }: RoutingMachineProps) {
   const map = useMap();
+  const onRouteFoundRef = useRef(onRouteFound);
+
+  useEffect(() => {
+    onRouteFoundRef.current = onRouteFound;
+  }, [onRouteFound]);
 
   useEffect(() => {
     if (!map) return;
@@ -43,16 +49,25 @@ export default function RoutingMachine({
       createMarker: () => null, // kikapcsoljuk az alapértelmezett markereket mert sajátokat használunk
     }).addTo(map);
 
+    const container = routingControl.getContainer();
+    if (container) {
+      container.style.display = 'none';
+    }
+
     // eseményfigyelő amikor az útvonal elkészült kinyerjük az adatokat
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     routingControl.on('routesfound', function (e: any) {
       const routes = e.routes;
       const summary = routes[0].summary;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const coordinates = routes[0].coordinates.map((c: any) => [c.lng, c.lat]);
+
       // visszaküldjük a szülőnek a távolságot és időt
-      if (onRouteFound) {
-        onRouteFound({
+      if (onRouteFoundRef.current) {
+        onRouteFoundRef.current({
           totalDistance: summary.totalDistance,
           totalTime: summary.totalTime,
+          coordinates: coordinates,
         });
       }
     });
@@ -61,7 +76,7 @@ export default function RoutingMachine({
     return () => {
       map.removeControl(routingControl);
     };
-  }, [map, waypoints, onRouteFound]);
+  }, [map, waypoints]); // onRouteFound removed from deps
 
   return null;
 }

@@ -1,20 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
 import type { ChangeEvent } from 'react';
 import {
-  MdEdit,
-  MdTimer,
-  MdStraighten,
-  MdDescription,
-  MdAdd,
-  MdClose,
-  MdError,
-} from 'react-icons/md';
-import { BiLeftArrow, BiRightArrow, BiUpload } from 'react-icons/bi';
-import '../styles/RoutPageStyles.css';
+  PencilSimpleIcon,
+  TimerIcon,
+  RulerIcon,
+  TextAlignLeftIcon,
+  PlusIcon,
+  XIcon,
+  WarningCircleIcon,
+  CaretLeftIcon,
+  CaretRightIcon,
+  UploadSimpleIcon,
+} from '@phosphor-icons/react';
 import { useRouteForm } from '../hooks/useRouteForm';
 import { useTranslation } from 'react-i18next';
 import { parseGpxToGeoJSON } from '../utils/gpxParser';
 import type { FeatureCollection } from 'geojson';
+import { Button } from './ui/Button';
 
 // itt vannak a propsok amiket kapunk
 interface RouteEditorPanelProps {
@@ -63,7 +65,6 @@ export default function RouteEditorPanel({
     useRouteForm();
 
   const [images, setImages] = useState<File[]>([]);
-  const [buttonScale, setButtonScale] = useState(1);
   const [showErrors, setShowErrors] = useState(false);
   const totalSlots = Math.max(3, images.length + 1);
 
@@ -73,16 +74,12 @@ export default function RouteEditorPanel({
 
   const isFormValid = isNameValid && isDescValid && isRouteValid;
 
-  const handleMouseEnter = () => {
-    if (!isFormValid) {
-      setButtonScale(0.1);
+  const handleSubmit = () => {
+    if (isFormValid) {
+      onSave();
+    } else {
       setShowErrors(true);
     }
-  };
-
-  const handleMouseLeave = () => {
-    setButtonScale(1);
-    setShowErrors(false);
   };
 
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -146,31 +143,34 @@ export default function RouteEditorPanel({
   }, [gpxFile, onGpxLoaded]);
 
   return (
-    <div
-      className="route-editor-panel"
-      style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <h2 className="editor-header">
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <MdEdit style={{ marginRight: '10px' }} /> {t('routeForm.title')}
+    <div className="h-full flex flex-col bg-brand-dark overflow-y-auto">
+      {/* Header */}
+      <div className="p-6 border-b border-white/5 flex items-center justify-between sticky top-0 bg-brand-dark/95 backdrop-blur-md z-20">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-full bg-brand-accent/10 text-brand-accent">
+            <PencilSimpleIcon size={20} weight="fill" />
+          </div>
+          <h2 className="text-xl font-display font-bold text-white">
+            {t('routeForm.title')}
+          </h2>
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
-          <MdClose
-            style={{ cursor: 'pointer' }}
-            title={t('routeForm.close_menu')}
-            onClick={closeRouteEditor}
-          />
-        </div>
-      </h2>
+        <button
+          onClick={closeRouteEditor}
+          className="p-2 rounded-full hover:bg-white/5 text-brand-muted hover:text-white transition-colors"
+          title={t('routeForm.close_menu')}>
+          <XIcon size={20} />
+        </button>
+      </div>
 
-      <div className="editor-form-row">
-        <div className="editor-input-group">
-          <label htmlFor="route-name" className="editor-label">
-            {t('routeForm.route_name')}:
+      <div className="p-6 space-y-6 flex-1">
+        {/* Route Name Input */}
+        <div className="space-y-2">
+          <label
+            htmlFor="route-name"
+            className="flex items-center gap-2 text-sm font-medium text-brand-muted">
+            {t('routeForm.route_name')}
             {showErrors && !isNameValid && (
-              <MdError
-                color="red"
-                style={{ marginLeft: '5px', verticalAlign: 'middle' }}
-              />
+              <WarningCircleIcon size={16} className="text-red-500" />
             )}
           </label>
           <input
@@ -179,24 +179,47 @@ export default function RouteEditorPanel({
             value={name}
             onChange={(e) => onNameChange(e.target.value)}
             placeholder={t('routeForm.name_placeholder')}
-            className="editor-input"
-            style={{
-              borderColor: showErrors && !isNameValid ? 'red' : undefined,
-              boxShadow:
-                showErrors && !isNameValid ? '0 0 0 1px red' : undefined,
-            }}
+            className={`w-full bg-white/5 border rounded-xl py-3 px-4 text-white placeholder-brand-muted focus:outline-none focus:border-brand-accent/50 transition-colors ${
+              showErrors && !isNameValid
+                ? 'border-red-500/50'
+                : 'border-white/10'
+            }`}
           />
         </div>
 
-        <div className="editor-input-group large">
-          <label htmlFor="route-desc" className="editor-label">
-            <MdDescription style={{ verticalAlign: 'middle' }} />{' '}
-            {t('routeForm.description_label')}:
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 gap-4">
+          <div
+            className={`p-4 rounded-xl bg-white/5 border ${showErrors && !isRouteValid ? 'border-red-500/50' : 'border-white/5'}`}>
+            <div className="flex items-center gap-2 text-brand-muted mb-1 text-sm">
+              <RulerIcon size={16} />
+              <span>{t('routeForm.distance')}</span>
+            </div>
+            <div className="text-lg font-bold text-white font-display">
+              {formatDistance(distance)}
+            </div>
+          </div>
+          <div
+            className={`p-4 rounded-xl bg-white/5 border ${showErrors && !isRouteValid ? 'border-red-500/50' : 'border-white/5'}`}>
+            <div className="flex items-center gap-2 text-brand-muted mb-1 text-sm">
+              <TimerIcon size={16} />
+              <span>{t('routeForm.time')}</span>
+            </div>
+            <div className="text-lg font-bold text-white font-display">
+              {formatTime(time)}
+            </div>
+          </div>
+        </div>
+
+        {/* Description */}
+        <div className="space-y-2">
+          <label
+            htmlFor="route-desc"
+            className="flex items-center gap-2 text-sm font-medium text-brand-muted">
+            <TextAlignLeftIcon size={16} />
+            {t('routeForm.description_label')}
             {showErrors && !isDescValid && (
-              <MdError
-                color="red"
-                style={{ marginLeft: '5px', verticalAlign: 'middle' }}
-              />
+              <WarningCircleIcon size={16} className="text-red-500" />
             )}
           </label>
           <textarea
@@ -204,158 +227,127 @@ export default function RouteEditorPanel({
             value={description}
             onChange={(e) => onDescriptionChange(e.target.value)}
             placeholder={t('routeForm.description_placeholder')}
-            className="editor-input"
             rows={5}
-            style={{
-              borderColor: showErrors && !isDescValid ? 'red' : undefined,
-              boxShadow:
-                showErrors && !isDescValid ? '0 0 0 1px red' : undefined,
-              resize: 'none',
-              fontFamily: 'inherit',
-            }}
+            className={`w-full bg-white/5 border rounded-xl py-3 px-4 text-white placeholder-brand-muted focus:outline-none focus:border-brand-accent/50 transition-colors resize-none ${
+              showErrors && !isDescValid
+                ? 'border-red-500/50'
+                : 'border-white/10'
+            }`}
           />
         </div>
-      </div>
 
-      <div
-        className="editor-stats-row"
-        style={{
-          boxShadow: showErrors && !isRouteValid ? '0 0 0 2px red' : undefined,
-        }}>
-        <div className="editor-stat-item">
-          <MdStraighten style={{ marginRight: '5px', color: '#1976D2' }} />{' '}
-          <strong className="route-data">{t('routeForm.distance')}</strong>
-          &nbsp;
-          {formatDistance(distance)}
-        </div>
-        <div className="editor-stat-item">
-          <MdTimer style={{ marginRight: '5px', color: '#1976D2' }} />{' '}
-          <strong className="route-data">{t('routeForm.time')}</strong>&nbsp;
-          {formatTime(time)}
-        </div>
-      </div>
-      <div className="pics-container">
-        <div id="carousel" className="slider">
+        {/* Image Carousel */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-brand-muted">
+              {t('routeForm.image_alt')}
+            </label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => scrollCarousel(-120)}
+                className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-brand-muted hover:text-white">
+                <CaretLeftIcon size={16} />
+              </button>
+              <button
+                onClick={() => scrollCarousel(120)}
+                className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-brand-muted hover:text-white">
+                <CaretRightIcon size={16} />
+              </button>
+            </div>
+          </div>
+
           <div
-            id="carousel-slides"
-            className="slides"
             ref={carouselRef}
-            style={{ display: 'flex', overflowX: 'auto' }}>
+            className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
             {[...Array(totalSlots)].map((_, index) => {
               const image = images[index];
-
               return (
-                <div className="slide" key={index}>
+                <div
+                  key={index}
+                  className="flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden relative bg-white/5 border border-white/5 flex items-center justify-center snap-start">
                   {image ? (
-                    // Ha van kép ezen az indexen, megjelenítjük az előnézetet
-                    <div className="image-preview">
+                    <>
                       <img
                         src={URL.createObjectURL(image)}
-                        alt={t('routeForm.image_alt')}
+                        alt={`Upload ${index}`}
+                        className="w-full h-full object-cover"
                       />
                       <button
                         onClick={() => removeImage(index)}
-                        className="delete-btn">
-                        ×
+                        className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-red-500/80 rounded-full text-white backdrop-blur-sm transition-colors">
+                        <XIcon size={12} />
                       </button>
-                    </div>
+                    </>
                   ) : (
-                    // Ha nincs kép, ez egy feltöltő placeholder
-                    <label className="upload-placeholder">
-                      {index === images.length ? (
-                        <>
-                          <span>+</span>
-                          <input
-                            type="file"
-                            hidden
-                            onChange={(e) => handleUpload(e)}
-                            accept="image/*"
-                          />
-                        </>
-                      ) : null}
-                    </label>
+                    index === images.length && (
+                      <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-brand-muted hover:text-white hover:bg-white/5 transition-colors">
+                        <PlusIcon size={24} />
+                        <input
+                          type="file"
+                          hidden
+                          onChange={handleUpload}
+                          accept="image/*"
+                        />
+                      </label>
+                    )
                   )}
                 </div>
               );
             })}
           </div>
         </div>
-        <div className="buttons">
-          <button className="btn-prev" onClick={() => scrollCarousel(-120)}>
-            <div>
-              <BiLeftArrow size={18} />
-            </div>
-          </button>
-          <button className="btn-next" onClick={() => scrollCarousel(120)}>
-            <div>
-              {' '}
-              <BiRightArrow size={18} />
-            </div>
-          </button>
-        </div>
-      </div>
-      <div className="editor-actions">
-        <button
-          className={`editor-add-btn ${isFormValid ? 'valid' : 'invalid'}`}
-          type="button"
-          onClick={isFormValid ? onSave : undefined}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          style={{
-            transform: `scale(${buttonScale})`,
-            transition: 'transform 0.3s ease',
-          }}>
-          <MdAdd style={{ marginRight: '8px' }} /> {t('routeForm.add_route')}
-        </button>
-      </div>
 
-      <div className="separator" style={{ marginTop: 'auto' }}>
-        <span>{t('routeForm.or')}</span>
-      </div>
+        {/* GPX Upload */}
+        <div className="pt-4 border-t border-white/5">
+          <input
+            type="file"
+            ref={gpxInputRef}
+            onChange={handleGpxChange}
+            style={{ display: 'none' }}
+            accept=".gpx,.geojson,.json"
+          />
 
-      <div
-        className="uploadTrailBtn"
-        style={{ position: 'relative', width: '100%' }}>
-        <input
-          type="file"
-          ref={gpxInputRef}
-          onChange={handleGpxChange}
-          style={{ display: 'none' }}
-          accept=".gpx,.geojson,.json"
-        />
-
-        <button
-          type="button"
-          className="route-upload-gpx-btn"
-          onClick={
-            disableGpxUpload
-              ? () => alert(t('routeForm.manual_nav_active'))
-              : triggerGpxInput
-          }
-          style={{
-            opacity: disableGpxUpload ? 0.6 : 1,
-            cursor: disableGpxUpload ? 'not-allowed' : 'pointer',
-          }}>
-          {gpxFile ? (
-            `📄 ${gpxFile.name}`
-          ) : (
-            <>
-              <BiUpload style={{ marginRight: '8px' }} />
-              {t('routeForm.upload_file')}
-            </>
-          )}
-        </button>
-        {gpxFile && (
-          <button
-            type="button"
-            className="route-form-gpx-remove"
-            onClick={(e) => {
-              e.stopPropagation();
-              clearGpx();
+          <Button
+            variant="secondary"
+            className="w-full justify-between group"
+            onClick={
+              disableGpxUpload
+                ? () => alert(t('routeForm.manual_nav_active'))
+                : triggerGpxInput
+            }
+            style={{
+              opacity: disableGpxUpload ? 0.6 : 1,
+              cursor: disableGpxUpload ? 'not-allowed' : 'pointer',
             }}>
-            ✕
-          </button>
-        )}
+            <span className="flex items-center gap-2">
+              <UploadSimpleIcon size={18} />
+              {gpxFile ? gpxFile.name : t('routeForm.upload_file')}
+            </span>
+            {gpxFile && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearGpx();
+                }}
+                className="p-1 hover:bg-red-500/20 text-brand-muted hover:text-red-400 rounded-full transition-colors">
+                <XIcon size={16} />
+              </button>
+            )}
+          </Button>
+          <p className="text-xs text-brand-muted text-center mt-2">
+            {t('routeForm.or')}
+          </p>
+        </div>
+
+        {/* Save Action */}
+        <Button
+          variant="primary"
+          className="w-full py-3 text-base"
+          onClick={handleSubmit}>
+          <PlusIcon size={18} weight="bold" className="mr-2" />
+          {t('routeForm.add_route')}
+        </Button>
       </div>
     </div>
   );

@@ -62,6 +62,96 @@
       "3": "Extreme"
     }
   },
+  "landing": {
+    "hero": {
+      "badge": "Explore the Unseen",
+      "title_prefix": "Wilderness",
+      "title_suffix": "Awaits.",
+      "description": "Discover hidden trails, track your journey, and connect with a community of explorers. Your next great adventure starts here.",
+      "cta_primary": "Start Planning",
+      "cta_secondary": "View Community",
+      "stat_distance": "Total Distance",
+      "stat_elevation": "Elevation Gain"
+    },
+    "features": {
+      "title": "Everything you need",
+      "subtitle": "Advanced tools designed for the modern hiker. From planning to tracking, we've got you covered.",
+      "maps_title": "Interactive Routes",
+      "maps_desc": "Plan detailed routes with elevation profiles, waypoints, and offline capabilities. Never lose your way again.",
+      "weather_title": "Live Weather",
+      "weather_desc": "Real-time updates and forecasts for your specific trail location.",
+      "community_title": "Community",
+      "community_desc": "Share your journals, photos, and tips with fellow hikers.",
+      "stat_mapped": "National Parks Mapped"
+    }
+  },
+  "route": {
+    "search_placeholder": "Find a trail...",
+    "showing_count": "Showing {{count}} trails",
+    "active_trails": "Active Trails",
+    "view_details": "View Details",
+    "stats": {
+      "dist": "Dist",
+      "elev": "Elev",
+      "time": "Time"
+    }
+  },
+  "social_page": {
+    "page_title": "Community Feed",
+    "page_subtitle": "Share your adventures and discover new paths from the community.",
+    "create_post_placeholder": "Start a new post..."
+  },
+  "dashboard": {
+    "stats": {
+      "hikes": "Hikes",
+      "distance": "Distance",
+      "elevation": "Elevation"
+    },
+    "upcoming": {
+      "title": "Upcoming Adventures",
+      "days_left": "{{count}} Days to go"
+    },
+    "memories": {
+      "title": "Recent Memories",
+      "view_all": "View All"
+    },
+    "checklist": {
+      "title": "Expedition Prep",
+      "edit_button": "Edit Checklist",
+      "items": {
+        "offline_maps": "Download offline maps",
+        "weather_check": "Check weather forecast",
+        "first_aid": "Pack first aid kit",
+        "power_bank": "Charge power bank",
+        "boots": "Clean hiking boots"
+      }
+    },
+    "badges": {
+      "title": "Recent Badges"
+    }
+  },
+  "weather_page": {
+    "current_weather": "Current Weather",
+    "unknown_conditions": "Unknown Conditions",
+    "next_48h": "Next 48 Hours",
+    "units": {
+      "meters_per_sec": "meters / sec",
+      "percent": "%"
+    },
+    "labels": {
+      "humidity": "Humidity",
+      "precip_chance": "Precipitation Chance",
+      "probability": "probability"
+    },
+    "status": {
+      "expect_rain": "Expect Rain",
+      "likely_dry": "Likely Dry"
+    },
+    "error": {
+      "failed": "Failed to load forecast",
+      "retry": "Retry"
+    }
+  },
   "routeForm": {
     "route_name": "Trail name",
     "add_photo": "Add photo",

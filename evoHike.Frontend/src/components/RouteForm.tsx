@@ -1,6 +1,12 @@
 import React from 'react';
 import { useRouteForm } from '../hooks/useRouteForm';
 import { useTranslation } from 'react-i18next';
+import {
+  FileTextIcon,
+  XIcon,
+  CameraPlusIcon,
+  CheckCircleIcon,
+} from '@phosphor-icons/react';
 import '../styles/RouteForm.css';
 
 function RouteForm() {
@@ -65,7 +71,14 @@ function RouteForm() {
               className="route-upload-gpx-btn"
               onClick={triggerGpxInput}
               style={{ position: 'relative' }}>
-              {gpxFile ? `📄 ${gpxFile.name}` : t('routeForm.upload_file')}
+              {gpxFile ? (
+                <div className="flex items-center gap-2">
+                  <FileTextIcon size={18} />
+                  <span>{gpxFile.name}</span>
+                </div>
+              ) : (
+                t('routeForm.upload_file')
+              )}
 
               {gpxFile && (
                 <button
@@ -74,7 +87,7 @@ function RouteForm() {
                     e.stopPropagation();
                     clearGpx();
                   }}>
-                  ✕
+                  <XIcon size={14} />
                 </button>
               )}
             </button>
@@ -85,10 +98,16 @@ function RouteForm() {
                 type="button"
                 className="route-form-photo-remove"
                 onClick={handleRemovePhoto}>
-                ✕
+                <XIcon size={14} />
               </button>
             )}
-            <div className="route-form-photo-icon">{photo ? '✅' : '📷+'}</div>
+            <div className="route-form-photo-icon">
+              {photo ? (
+                <CheckCircleIcon size={24} color="#22c55e" />
+              ) : (
+                <CameraPlusIcon size={24} />
+              )}
+            </div>
             <span className="route-form-photo-name">
               {photo ? photo.name : t('routeForm.add_photo')}
             </span>
@@ -127,7 +146,7 @@ function RouteForm() {
                   type="button"
                   className="route-form-remove-btn"
                   onClick={() => removeStop(stop.id)}>
-                  ✕
+                  <XIcon size={18} />
                 </button>
               )}
             </div>

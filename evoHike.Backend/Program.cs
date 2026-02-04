@@ -10,7 +10,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new NetTopologySuite.IO.Converters.GeoJsonConverterFactory());
     });
 
-builder.Services.AddHttpClient<WeatherService>();
+builder.Services.AddScoped<WeatherService>();
 
 builder.Services.AddApplicationCors(builder.Configuration);
 builder.Services.AddApplicationSwagger();

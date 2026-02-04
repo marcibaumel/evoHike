@@ -10,7 +10,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <Navbar />
-      <App />
+      <main className="min-h-screen">
+        <App />
+      </main>
     </BrowserRouter>
   </StrictMode>,
 );

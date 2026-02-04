@@ -1,138 +1,135 @@
-﻿import { useTranslation } from 'react-i18next';
-import { useApi } from '../hooks/useApi';
+﻿import { MapTrifoldIcon, PlusIcon } from '@phosphor-icons/react';
+import { ProfileHeader } from '../components/dashboard/ProfileHeader';
+import {
+  UpcomingHikeCard,
+  type UpcomingHike,
+} from '../components/dashboard/UpcomingHikeCard';
+import { PhotoGrid } from '../components/dashboard/PhotoGrid';
+import {
+  ExpeditionChecklist,
+  type ChecklistItem,
+} from '../components/dashboard/ExpeditionChecklist';
+import { AchievementsWidget } from '../components/dashboard/AchievementsWidget';
+import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
 
-const normalizeText = (text: string) => {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-};
+function JournalPage() {
+  const { t } = useTranslation();
 
-const getTranslationKey = (text: string): string | null => {
-  if (!text) return null;
-  const cleanText = normalizeText(text);
-
-  if (cleanText.includes('viz') || cleanText.includes('1.5')) return 'water';
-
-  if (cleanText.includes('esokabat') || cleanText.includes('valtoruha'))
-    return 'raincoat';
-
-  if (cleanText.includes('telefon') || cleanText.includes('powerbank'))
-    return 'phone';
-
-  if (cleanText.includes('terkep') || cleanText.includes('gps')) return 'map';
-
-  if (cleanText.includes('elsosegely')) return 'first_aid';
-
-  if (cleanText.includes('elelem') || cleanText.includes('energia'))
-    return 'food';
-
-  if (cleanText.includes('iranytu')) return 'compass';
-
-  if (cleanText.includes('zseblampa')) return 'flashlight';
-
-  return null;
-};
-interface RouteEntity {
-  id: number;
-  name: string;
-}
-interface PlannedHike {
-  id: number;
-  routeId: number;
-  plannedStartDateTime: string;
-  plannedEndDateTime: string;
-  checklistJson: string;
-  route?: RouteEntity;
-}
-
-const JournalPage = () => {
-  const { t, i18n } = useTranslation();
-  const {
-    data: hikes,
-    loading,
-    error,
-  } = useApi<PlannedHike[]>('/api/plannedhikes');
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '-';
-
-    return new Date(dateString).toLocaleString(i18n.language, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const user = {
+    name: 'Alex Wanderer',
+    level: 'Pathfinder Lvl. 12',
+    avatar:
+      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=1780&auto=format&fit=crop',
+    stats: {
+      totalDistance: '1,248 km',
+      elevationGain: '8,848 m',
+      hikesCompleted: 42,
+    },
   };
 
-  const parseChecklist = (json: string): string[] => {
-    try {
-      return json ? JSON.parse(json) : [];
-    } catch {
-      return [];
-    }
-  };
+  const upcomingHikes: UpcomingHike[] = [
+    {
+      id: 1,
+      title: 'Bükk Peaks Challenge',
+      date: 'Oct 12, 2024',
+      daysLeft: 3,
+      difficulty: 'Hard',
+      image:
+        'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop',
+    },
+    {
+      id: 2,
+      title: 'Lillafüred Waterfall Loop',
+      date: 'Oct 20, 2024',
+      daysLeft: 11,
+      difficulty: 'Moderate',
+      image:
+        'https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?q=80&w=2070&auto=format&fit=crop',
+    },
+  ];
 
-  const getTranslatedItems = (json: string) => {
-    const items = parseChecklist(json);
-    return items
-      .map((item) => {
-        const key = getTranslationKey(item);
-        return key ? t(`checklist.${key}`) : item;
-      })
-      .join(', ');
-  };
+  const recentPhotos = [
+    'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=2560&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1502085671122-2d218cd434e6?q=80&w=1226&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=2548&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=2070&auto=format&fit=crop',
+  ];
 
-  if (loading)
-    return (
-      <div style={{ padding: '20px' }}>
-        {t('plan.loading') || 'Betöltés...'}
-      </div>
-    );
-  if (error)
-    return <div style={{ color: 'red', padding: '20px' }}>Hiba: {error}</div>;
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([
+    {
+      id: '1',
+      text: t('dashboard.checklist.items.offline_maps'),
+      isCompleted: false,
+    },
+    {
+      id: '2',
+      text: t('dashboard.checklist.items.weather_check'),
+      isCompleted: false,
+    },
+    {
+      id: '3',
+      text: t('dashboard.checklist.items.first_aid'),
+      isCompleted: false,
+    },
+    {
+      id: '4',
+      text: t('dashboard.checklist.items.power_bank'),
+      isCompleted: false,
+    },
+    { id: '5', text: t('dashboard.checklist.items.boots'), isCompleted: false },
+  ]);
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>{t('Travel Diary') || 'Túranapló'}</h1>
+    <div className="min-h-screen bg-brand-dark pt-28 pb-12 px-4 selection:bg-brand-accent selection:text-brand-dark">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Profile Header */}
+        <ProfileHeader user={user} />
 
-      {!hikes || hikes.length === 0 ? (
-        <p>Nincs mentett túra.</p>
-      ) : (
-        <ul style={{ listStyleType: 'none', padding: 0 }}>
-          {hikes.map((hike) => (
-            <li
-              key={hike.id}
-              style={{
-                marginBottom: '20px',
-                borderBottom: '1px solid #ccc',
-                paddingBottom: '15px',
-              }}>
-              <h3 style={{ margin: '0 0 10px 0' }}>
-                {hike.route?.name || 'Ismeretlen túra'}
-              </h3>
+        {/* Dashboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Column */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Upcoming Adventures */}
+            <section>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-display font-bold text-white flex items-center gap-2">
+                  <MapTrifoldIcon className="text-brand-accent" />{' '}
+                  {t('dashboard.upcoming.title')}
+                </h2>
+                <button className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors">
+                  <PlusIcon size={20} className="text-white" />
+                </button>
+              </div>
 
-              <p style={{ margin: '5px 0' }}>
-                <strong>{t('plan.start_date') || 'Kezdés'}:</strong>{' '}
-                {formatDate(hike.plannedStartDateTime)}
-              </p>
+              <div className="grid gap-4">
+                {upcomingHikes.map((hike) => (
+                  <UpcomingHikeCard key={hike.id} hike={hike} />
+                ))}
+              </div>
+            </section>
 
-              <p style={{ margin: '5px 0' }}>
-                <strong>{t('plan.end_date') || 'Vége'}:</strong>{' '}
-                {formatDate(hike.plannedEndDateTime)}
-              </p>
+            {/* Recent Memories (Gallery) */}
+            <PhotoGrid photos={recentPhotos} />
+          </div>
 
-              <p style={{ margin: '5px 0' }}>
-                <strong>{t('plan.checklist_title') || 'Felszerelés'}:</strong>{' '}
-                {getTranslatedItems(hike.checklistJson) || 'Nincs'}
-              </p>
-            </li>
-          ))}
-        </ul>
-      )}
+          {/* Sidebar */}
+          <div className="space-y-8">
+            {/* Checklist */}
+            <ExpeditionChecklist
+              title={t('dashboard.checklist.title')}
+              subtitle="Bükk Peaks Challenge"
+              items={checklistItems}
+              onUpdate={setChecklistItems}
+            />
+
+            {/* Achievements Mini */}
+            <AchievementsWidget />
+          </div>
+        </div>
+      </div>
     </div>
   );
-};
+}
 
 export default JournalPage;

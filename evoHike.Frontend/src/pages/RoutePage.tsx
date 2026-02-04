@@ -1,688 +1,267 @@
-import '../styles/RoutPageStyles.css';
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import routeData from '../data/routes.json' assert { type: 'json' };
-import type { FeatureCollection, Feature } from 'geojson';
-import 'leaflet/dist/leaflet.css';
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  GeoJSON,
-  useMapEvents,
-} from 'react-leaflet';
-import MarkerClusterGroup from 'react-leaflet-cluster';
-import {
-  type Layer,
-  Map,
-  latLngBounds,
-  type PathOptions,
-  type LeafletMouseEvent,
-} from 'leaflet';
+import { useState, useEffect, useMemo } from 'react';
+import type { FeatureCollection } from 'geojson';
 import { useTranslation } from 'react-i18next';
-import TrailCard from '../components/TrailCard';
+import { TrailCard } from '../components/route/TrailCard';
+import { RouteMap } from '../components/route/RouteMap';
 import { Trail } from '../models/Trail';
-import trailData from '../data/mockTrails.json';
-import { getNearbyPOIs, type OverpassElement } from '../api/overpassApi';
-import RoutingMachine from '../components/RoutingMachine';
+import backendTrails from '../data/backendTrails.json';
 import type { DifficultyLevel } from '../types/difficulty';
 import {
-  createClusterCustomIcon,
-  getIconForPoi,
-  startIcon,
-  endIcon,
-  waypointIcon,
-} from '../utils/mapIcons';
-import MapContextMenu from '../components/MapContextMenu';
-import SelectedTrailDetails from '../components/SelectedTrailDetails';
-import MapLegend from '../components/MapLegend';
-import MapNavigationControls from '../components/MapNavigationControls';
+  MagnifyingGlassIcon,
+  FadersIcon,
+  PlusIcon,
+} from '@phosphor-icons/react';
+import { Button } from '../components/ui/Button';
 import RouteEditorPanel from '../components/RouteEditorPanel';
-import { MdDelete } from 'react-icons/md';
-import TrailListPanel from '../components/TrailListPanel';
-import { calculateGeoJsonLength } from '../utils/geoUtils';
-import PlanHikeModal from '../components/PlanHikeModel';
 
-const geojson = routeData as FeatureCollection;
-
-// statikus adatok kiemelése hogy ne generálódjon újra
-const mockTrails = trailData.map(
-  (t) =>
-    new Trail({
-      ...t,
-      difficulty: t.difficulty as DifficultyLevel,
-    }),
-);
-
-// stílusok stabilizálása hogy ne jöjjön létre új objektum
-const visualLayerStyle: PathOptions = {
-  weight: 5,
-  color: '#3388ff',
-  interactive: false,
-};
-const interactionLayerStyle: PathOptions = {
-  weight: 30,
-  opacity: 0,
-  lineCap: 'round',
-  lineJoin: 'round',
+const emptyGeoJson: FeatureCollection = {
+  type: 'FeatureCollection',
+  features: [],
 };
 
-// segéd komponens a térkép események elkapására
-const MapEvents = ({
-  onContextMenu,
-  onMapClick,
-}: {
-  onContextMenu: (e: LeafletMouseEvent) => void;
-  onMapClick: (e: LeafletMouseEvent) => void;
-}) => {
-  useMapEvents({
-    contextmenu: (e) => onContextMenu(e), // jobb klikk
-    click: (e) => onMapClick(e), // bal klikk
-  });
-  return null;
-};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TrailData = any;
 
 function RoutePage() {
   const { t } = useTranslation();
-
-  const [map, setMap] = useState<Map | null>(null);
-  // itt tároljuk a lekért nevezetességeket
-  const [pois, setPois] = useState<OverpassElement[]>([]);
-
-  // navigációs állapotok
-  const [navStart, setNavStart] = useState<[number, number] | null>(null);
-  const [navEnd, setNavEnd] = useState<[number, number] | null>(null);
-  const [navIntermediates, setNavIntermediates] = useState<[number, number][]>(
-    [],
-  );
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    lat: number;
-    lng: number;
-  } | null>(null);
-  // a kiválasztott túra adatai
-  const [selectedTrail, setSelectedTrail] = useState<Trail | null>(null);
-
-  const [planningTrail, setPlanningTrail] = useState<{
-    id: number;
-    name: string;
-  } | null>(null);
-
-  // navigációs kiválasztási mód
-  const [selectionMode, setSelectionMode] = useState<
-    'start' | 'end' | 'waypoint' | null
-  >(null);
-
-  // egyedi útvonal szerkesztő állapotok
-  const [customRouteName, setCustomRouteName] = useState('');
-  const [customRouteDesc, setCustomRouteDesc] = useState('');
-  const [customRouteStats, setCustomRouteStats] = useState({
-    distance: 0,
-    time: 0,
-  });
-
-  //Utvonal hozzadasa sidebar allapot valtozo
-  const [createStartButton, setCreateStartButton] = useState(false);
-
-  // Feltöltött GPX útvonal tárolása
-  const [uploadedGpxGeoJson, setUploadedGpxGeoJson] =
-    useState<FeatureCollection | null>(null);
-
-  // ref a navigációs állapot követésére
-  const isNavigationActiveRef = useRef(false);
-
-  // ref a térkép konténerhez a görgetéshez
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-
-  // ref az utolsó API kérés azonosításához
-  const lastRequestIdRef = useRef<number>(0);
-
-  const isManualNavigationActive = Boolean(
-    navStart || navEnd || navIntermediates.length > 0,
-  );
+  const [searchTerm, setSearchTerm] = useState('');
+  const [displayedGeoJson, setDisplayedGeoJson] =
+    useState<FeatureCollection>(emptyGeoJson);
+  const [isCreatingRoute, setIsCreatingRoute] = useState(false);
+  const [newRouteName, setNewRouteName] = useState('');
+  const [newRouteDescription, setNewRouteDescription] = useState('');
+  const [newRouteDistance, setNewRouteDistance] = useState(0);
+  const [newRouteTime, setNewRouteTime] = useState(0);
+  const [currentRouteCoordinates, setCurrentRouteCoordinates] = useState<
+    [number, number][]
+  >([]);
+  const [userTrails, setUserTrails] = useState<TrailData[]>([]);
 
   useEffect(() => {
-    isNavigationActiveRef.current = Boolean(
-      selectionMode || navStart || navEnd || navIntermediates.length > 0,
-    );
-  }, [selectionMode, navStart, navEnd, navIntermediates]);
-
-  const handleRouteSelect = useCallback(
-    async (coordinates: [number, number][]) => {
-      const requestId = Date.now();
-      lastRequestIdRef.current = requestId;
-
-      const apiCoordinates = coordinates.map(([lon, lat]) => ({ lat, lon }));
-
-      const results = await getNearbyPOIs(apiCoordinates, 200);
-
-      if (lastRequestIdRef.current === requestId) {
-        const namedPois = results.filter((p) => p.tags && p.tags.name);
-        setPois(namedPois);
+    const saved = localStorage.getItem('userTrails');
+    if (saved) {
+      try {
+        setUserTrails(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to parse user trails', e);
       }
-    },
-    [],
-  );
+    }
+  }, []);
 
-  // eseménykezelő a geojson réteghez
-  const onEachFeature = useCallback(
-    (feature: Feature, layer: Layer) => {
-      layer.on({
-        click: () => {
-          if (isNavigationActiveRef.current) return;
+  const allTrailsData = useMemo(() => {
+    return [...userTrails, ...backendTrails];
+  }, [userTrails]);
 
-          if (feature.geometry.type === 'LineString') {
-            const trailId = feature.properties?.id;
+  const allTrails = useMemo(() => {
+    return allTrailsData.map((t) => {
+      let difficulty: DifficultyLevel = 1;
+      if (t.difficulty === 'Easy') difficulty = 0;
+      else if (t.difficulty === 'Moderate') difficulty = 1;
+      else if (t.difficulty === 'Hard') difficulty = 2;
+      else if (t.difficulty === 'Extreme') difficulty = 3;
 
-            if (trailId) {
-              const foundTrail = mockTrails.find(
-                (t) => String(t.id) === String(trailId),
-              );
-              if (foundTrail) {
-                setSelectedTrail(foundTrail);
-              }
-            }
-
-            handleRouteSelect(
-              feature.geometry.coordinates as [number, number][],
-            );
-          }
-        },
+      return new Trail({
+        ...t,
+        difficulty: difficulty,
       });
-    },
-    [handleRouteSelect],
-  );
-
-  // jobb klikk kezelése
-  const handleContextMenu = useCallback((e: LeafletMouseEvent) => {
-    e.originalEvent.preventDefault();
-    setContextMenu({
-      x: e.originalEvent.clientX,
-      y: e.originalEvent.clientY,
-      lat: e.latlng.lat,
-      lng: e.latlng.lng,
     });
-  }, []);
+  }, [allTrailsData]);
 
-  const handleNavFrom = useCallback(() => {
-    if (uploadedGpxGeoJson) {
-      alert(t('routePage.gpxLoadedError'));
-      return;
-    }
-    if (contextMenu) {
-      setNavStart([contextMenu.lat, contextMenu.lng]);
-      setContextMenu(null);
-      setSelectedTrail(null);
-      setPois([]);
-    }
-  }, [contextMenu, uploadedGpxGeoJson, t]);
-
-  const handleNavTo = useCallback(() => {
-    if (uploadedGpxGeoJson) {
-      alert(t('routePage.gpxLoadedError'));
-      return;
-    }
-    if (contextMenu) {
-      setNavEnd([contextMenu.lat, contextMenu.lng]);
-      setContextMenu(null);
-      setSelectedTrail(null);
-      setPois([]);
-    }
-  }, [contextMenu, uploadedGpxGeoJson, t]);
-
-  const handleAddWaypoint = useCallback(() => {
-    if (uploadedGpxGeoJson) {
-      alert(t('routePage.gpxLoadedError'));
-      return;
-    }
-    if (contextMenu) {
-      setNavIntermediates((prev) => [
-        ...prev,
-        [contextMenu.lat, contextMenu.lng],
-      ]);
-      setContextMenu(null);
-      setSelectedTrail(null);
-      setPois([]);
-    }
-  }, [contextMenu, uploadedGpxGeoJson, t]);
-
-  const handleClearNav = useCallback(() => {
-    setNavStart(null);
-    setNavEnd(null);
-    setNavIntermediates([]);
-
-    if (!uploadedGpxGeoJson) {
-      setCustomRouteStats({ distance: 0, time: 0 });
-      setCustomRouteName('');
-    }
-    setContextMenu(null);
-  }, [uploadedGpxGeoJson]);
-
-  // egyedi pontok törlése
-  const handleRemoveStart = useCallback(() => {
-    setNavStart(null);
-  }, []);
-
-  const handleRemoveEnd = useCallback(() => {
-    setNavEnd(null);
-  }, []);
-
-  const handleRemoveWaypoint = useCallback((index: number) => {
-    setNavIntermediates((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const handleRouteFound = useCallback(
-    (summary: { totalDistance: number; totalTime: number }) => {
-      setCustomRouteStats({
-        distance: summary.totalDistance,
-        time: summary.totalTime,
-      });
-    },
-    [],
+  const filteredTrails = allTrails.filter((trail) =>
+    trail.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const handleMapClick = useCallback(
-    (e: LeafletMouseEvent) => {
-      if (contextMenu) {
-        setContextMenu(null);
-        return;
-      }
-
-      if (uploadedGpxGeoJson) {
-        alert(t('routePage.gpxLoadedError'));
-        return;
-      }
-
-      if (selectionMode === 'start') {
-        setNavStart([e.latlng.lat, e.latlng.lng]);
-        setSelectionMode(null);
-      } else if (selectionMode === 'end') {
-        setNavEnd([e.latlng.lat, e.latlng.lng]);
-        setSelectionMode(null);
-      } else if (selectionMode === 'waypoint') {
-        setNavIntermediates((prev) => [...prev, [e.latlng.lat, e.latlng.lng]]);
-        setSelectionMode(null);
-      }
-    },
-    [selectionMode, uploadedGpxGeoJson, contextMenu, t],
-  );
-
-  // kártya gombjának kezelése
-  const handleTrailCardSelect = useCallback(
-    (trailId: string) => {
-      const feature = geojson.features.find(
-        (f) =>
-          String(f.properties?.id) === String(trailId) &&
-          f.geometry.type === 'LineString',
-      );
-
-      if (feature && feature.geometry.type === 'LineString') {
-        const coordinates = feature.geometry.coordinates as [number, number][];
-
-        // logika futtatása
-        handleRouteSelect(coordinates);
-
-        // kiválasztott túra beállítása
-        const foundTrail = mockTrails.find(
-          (t) => String(t.id) === String(trailId),
-        );
-        if (foundTrail) setSelectedTrail(foundTrail);
-
-        // térkép mozgatása
-        if (map) {
-          // konverzió a határokhoz
-          const leafletCoords = coordinates.map(
-            ([lon, lat]) => [lat, lon] as [number, number],
-          );
-          const bounds = latLngBounds(leafletCoords);
-          map.fitBounds(bounds, { padding: [50, 50], animate: false });
-        }
-
-        // felgörgetés a térképhez
-        if (mapContainerRef.current) {
-          const yCoordinate =
-            mapContainerRef.current.getBoundingClientRect().top +
-            window.scrollY;
-          const yOffset = -100;
-          window.scrollTo({ top: yCoordinate + yOffset, behavior: 'smooth' });
-        }
-      }
-    },
-    [map, handleRouteSelect],
-  );
-
-  // waypoints memorizálása
-  const waypoints = useMemo(() => {
-    return navStart && navEnd ? [navStart, ...navIntermediates, navEnd] : [];
-  }, [navStart, navEnd, navIntermediates]);
-
-  // szűrt geojson adat a kiválasztott túra alapján
-  const filteredGeoJson = useMemo(() => {
-    if (!selectedTrail) return null;
-
-    const feature = geojson.features.find(
-      (f) => String(f.properties?.id) === String(selectedTrail.id),
+  const handleViewDetails = (trail: Trail) => {
+    const originalData = allTrailsData.find(
+      (t: TrailData) => t.id === trail.id,
     );
 
-    if (feature) {
+    if (originalData && originalData.geojson) {
+      const feature = originalData.geojson;
       const collection: FeatureCollection = {
         type: 'FeatureCollection',
         features: [feature],
       };
-      return collection;
+      setDisplayedGeoJson(collection);
     }
-    return null;
-  }, [selectedTrail]);
+  };
 
-  // GPX betöltés kezelése és zoomolás
-  const handleGpxLoaded = useCallback(
-    async (data: FeatureCollection | null) => {
-      setUploadedGpxGeoJson(data);
-
-      if (!data) {
-        setPois([]);
-        setCustomRouteStats({ distance: 0, time: 0 });
-        return;
-      }
-
-      if (navStart || navEnd || navIntermediates.length > 0) {
-        return;
-      }
-
-      // Biztosítjuk, hogy a szerkesztő panel nyitva maradjon
-      setCreateStartButton(true);
-
-      // Ha van adat, zoomoljunk rá
-      if (data.features && data.features.length > 0 && map) {
-        const feature = data.features[0];
-        if (feature.geometry.type === 'LineString') {
-          const coordinates = feature.geometry.coordinates as [
-            number,
-            number,
-          ][];
-
-          const leafletCoords = coordinates.map(
-            ([lon, lat]) => [lat, lon] as [number, number],
-          );
-          map.fitBounds(latLngBounds(leafletCoords), { padding: [50, 50] });
-
-          const distanceMeters = calculateGeoJsonLength(coordinates);
-
-          const estimatedTimeSeconds = distanceMeters / (4000 / 3600);
-
-          setCustomRouteStats({
-            distance: distanceMeters,
-            time: estimatedTimeSeconds,
-          });
-
-          // POI-k lekérése a feltöltött útvonal mentén
-          const requestId = Date.now();
-          lastRequestIdRef.current = requestId;
-
-          const apiCoordinates = coordinates.map(([lon, lat]) => ({
-            lat,
-            lon,
-          }));
-
-          const results = await getNearbyPOIs(apiCoordinates, 200);
-
-          if (lastRequestIdRef.current === requestId) {
-            const namedPois = results.filter((p) => p.tags && p.tags.name);
-            setPois(namedPois);
-          }
-        }
-      }
-    },
-    [map, navStart, navEnd, navIntermediates],
-  );
-
-  // segédfüggvény a sidebar tartalmának kiválasztására
-  const renderSidebarContent = () => {
-    // utvonal tervezes menu
-    if (navStart || navEnd || createStartButton) {
-      return (
-        <RouteEditorPanel
-          name={customRouteName}
-          description={customRouteDesc}
-          distance={customRouteStats.distance}
-          time={customRouteStats.time}
-          onNameChange={setCustomRouteName}
-          onDescriptionChange={setCustomRouteDesc}
-          onSave={() =>
-            alert(`${t('routePage.routeSaved')}: ${customRouteName}`)
-          }
-          closeRouteEditor={() => {
-            setCreateStartButton(false);
-          }}
-          onGpxLoaded={handleGpxLoaded}
-          disableGpxUpload={isManualNavigationActive}
-        />
-      );
+  const handleSaveNewRoute = () => {
+    if (!newRouteName) {
+      alert('Please enter a route name.');
+      return;
     }
 
-    // alapertelmezetten megjeleniti az utvonalak listajat
-    return (
-      <TrailListPanel
-        onSelectTrail={handleTrailCardSelect}
-        onStartCreateRoute={() => {
-          setCreateStartButton(true);
-        }}
-      />
-    );
+    const newId = `user-${Date.now()}`;
+
+    const geometry = {
+      type: 'LineString',
+      coordinates: currentRouteCoordinates,
+    };
+
+    const newTrail: TrailData = {
+      id: newId,
+      name: newRouteName,
+      location: 'Custom Route',
+      length: newRouteDistance,
+      difficulty:
+        newRouteDistance < 5000
+          ? 'Easy'
+          : newRouteDistance > 15000
+            ? 'Hard'
+            : 'Moderate',
+      elevationGain: 0,
+      time: newRouteTime,
+      rating: 0,
+      reviewCount: 0,
+      coverPhotoPath: '',
+      description: newRouteDescription,
+      userPhotos: [],
+      geojson: {
+        type: 'Feature',
+        properties: {
+          id: newId,
+          name: newRouteName,
+        },
+        geometry: geometry,
+      },
+    };
+
+    const updatedUserTrails = [newTrail, ...userTrails];
+    setUserTrails(updatedUserTrails);
+    localStorage.setItem('userTrails', JSON.stringify(updatedUserTrails));
+
+    setIsCreatingRoute(false);
+    setNewRouteName('');
+    setNewRouteDescription('');
+    setNewRouteDistance(0);
+    setNewRouteTime(0);
+    setCurrentRouteCoordinates([]);
+  };
+
+  const handleDeleteTrail = (trail: Trail) => {
+    if (
+      confirm(
+        t(
+          'route.confirm_delete',
+          'Are you sure you want to delete this trail?',
+        ),
+      )
+    ) {
+      const updatedUserTrails = userTrails.filter((t) => t.id !== trail.id);
+      setUserTrails(updatedUserTrails);
+      localStorage.setItem('userTrails', JSON.stringify(updatedUserTrails));
+
+      setDisplayedGeoJson(emptyGeoJson);
+    }
+  };
+
+  const handleRouteCalculated = (
+    distance: number,
+    time: number,
+    coordinates: [number, number][] = [],
+  ) => {
+    setNewRouteDistance(distance);
+    setNewRouteTime(time);
+    setCurrentRouteCoordinates(coordinates);
+  };
+
+  const handleGpxLoaded = (data: FeatureCollection | null) => {
+    if (data) {
+      setDisplayedGeoJson(data);
+      setNewRouteDistance(5000);
+      setNewRouteTime(3600);
+    }
   };
 
   return (
-    <div className="route-page-wrapper">
-      <h1 className="route-page-title">{t('routePageH1')}</h1>
-      <div className="map-section-container">
-        {/* bal oldali sáv tartalma a segédfüggvény alapján */}
-        <div className="map-sidebar">{renderSidebarContent()}</div>
-
-        {/* ha választunk a kurzor legyen célkereszt */}
-        <div
-          ref={mapContainerRef}
-          className={`map-container-wrapper ${selectionMode ? 'selection-mode-active' : ''}`}
-          style={{ flexGrow: 1 }}>
-          <MapContainer
-            className="map"
-            center={[48.1007, 20.7897]}
-            zoom={13}
-            ref={setMap}>
-            {/* eseményfigyelő a klikkekhez */}
-            <MapEvents
-              onContextMenu={handleContextMenu}
-              onMapClick={handleMapClick}
-            />
-
-            {/* open street maps csempék */}
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-
-            {/* útvonaltervező megjelenítése */}
-            {navStart && navEnd && (
-              <RoutingMachine
-                waypoints={waypoints}
-                onRouteFound={handleRouteFound}
-              />
-            )}
-
-            {/* köztes pontok megjelenítése */}
-            {navIntermediates.map((pos, idx) => (
-              <Marker
-                key={`waypoint-${idx}`}
-                position={pos}
-                icon={waypointIcon}>
-                <Popup>
-                  <div className="popup-content-wrapper">
-                    <strong>
-                      {t('routePage.intermediatePoint')} {idx + 1}
-                    </strong>
-                    <br />
-                    <button
-                      onClick={() => handleRemoveWaypoint(idx)}
-                      className="popup-delete-btn">
-                      <MdDelete style={{ marginRight: '4px' }} />{' '}
-                      {t('routePage.delete')}
-                    </button>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-
-            {/* start pont megjelenítése */}
-            {navStart && (
-              <Marker position={navStart} icon={startIcon}>
-                <Popup>
-                  <div className="popup-content-wrapper">
-                    <strong>{t('routePage.startPoint')}</strong>
-                    <br />
-                    <button
-                      onClick={handleRemoveStart}
-                      className="popup-delete-btn">
-                      <MdDelete style={{ marginRight: '4px' }} />{' '}
-                      {t('routePage.delete')}
-                    </button>
-                  </div>
-                </Popup>
-              </Marker>
-            )}
-
-            {/* célpont megjelenítése */}
-            {navEnd && (
-              <Marker position={navEnd} icon={endIcon}>
-                <Popup>
-                  <div className="popup-content-wrapper">
-                    <strong>{t('routePage.endPoint')}</strong>
-                    <br />
-                    <button
-                      onClick={handleRemoveEnd}
-                      className="popup-delete-btn">
-                      <MdDelete style={{ marginRight: '4px' }} />{' '}
-                      {t('routePage.delete')}
-                    </button>
-                  </div>
-                </Popup>
-              </Marker>
-            )}
-
-            {/* vizuális réteg */}
-            {filteredGeoJson && (
-              <GeoJSON
-                key={`visual-${selectedTrail?.id}`}
-                data={filteredGeoJson}
-                style={visualLayerStyle}
-              />
-            )}
-
-            {/* interakciós réteg */}
-            {filteredGeoJson && (
-              <GeoJSON
-                key={`interaction-${selectedTrail?.id}`}
-                data={filteredGeoJson}
-                onEachFeature={onEachFeature}
-                style={interactionLayerStyle}
-              />
-            )}
-
-            {/* Feltöltött GPX útvonal megjelenítése (kék szaggatott vonal) */}
-            {uploadedGpxGeoJson && (
-              <GeoJSON
-                key="uploaded-gpx"
-                data={uploadedGpxGeoJson}
-                style={{ ...visualLayerStyle, dashArray: '10, 10' }}
-              />
-            )}
-
-            <MarkerClusterGroup
-              chunkedLoading
-              iconCreateFunction={createClusterCustomIcon}>
-              {pois.length > 0 &&
-                pois.map((poi) => (
-                  <Marker
-                    key={poi.id}
-                    position={[poi.lat, poi.lon]}
-                    icon={getIconForPoi(poi)}>
-                    <Popup>{poi.tags?.name}</Popup>
-                  </Marker>
-                ))}
-            </MarkerClusterGroup>
-          </MapContainer>
-          <MapLegend />
-
-          {/* jobb oldali navigációs panel */}
-          <MapNavigationControls
-            onSelectStartMode={() => {
-              if (uploadedGpxGeoJson) {
-                alert(t('routePage.gpxLoadedError'));
-                return;
-              }
-              setSelectionMode('start');
-              setSelectedTrail(null);
-              setPois([]);
-            }}
-            onSelectEndMode={() => {
-              if (uploadedGpxGeoJson) {
-                alert(t('routePage.gpxLoadedError'));
-                return;
-              }
-              setSelectionMode('end');
-              setSelectedTrail(null);
-              setPois([]);
-            }}
-            onSelectWaypointMode={() => {
-              if (uploadedGpxGeoJson) {
-                alert(t('routePage.gpxLoadedError'));
-                return;
-              }
-              setSelectionMode('waypoint');
-              setSelectedTrail(null);
-              setPois([]);
-            }}
-            onClear={handleClearNav}
-            selectionMode={selectionMode}
+    <div className="flex flex-col lg:flex-row min-h-screen lg:h-screen pt-20 lg:overflow-hidden bg-brand-dark">
+      {/* Sidebar - Trail List or Editor */}
+      <div className="w-full lg:w-1/3 flex flex-col border-r border-white/10 bg-brand-dark z-10 relative">
+        {isCreatingRoute ? (
+          <RouteEditorPanel
+            name={newRouteName}
+            description={newRouteDescription}
+            distance={newRouteDistance}
+            time={newRouteTime}
+            onNameChange={setNewRouteName}
+            onDescriptionChange={setNewRouteDescription}
+            onSave={handleSaveNewRoute}
+            closeRouteEditor={() => setIsCreatingRoute(false)}
+            onGpxLoaded={handleGpxLoaded}
           />
-        </div>
+        ) : (
+          <>
+            {/* Header & Filter */}
+            <div className="p-6 border-b border-white/5 bg-brand-dark/95 backdrop-blur-md sticky top-0 z-20">
+              <h1 className="text-3xl font-display font-bold mb-4">
+                {t('routePageH1')}
+              </h1>
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <MagnifyingGlassIcon
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted"
+                    size={18}
+                  />
+                  <input
+                    type="text"
+                    placeholder={t('route.search_placeholder')}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-brand-muted focus:outline-none focus:border-brand-accent/50 transition-colors"
+                  />
+                </div>
+                <Button
+                  variant="secondary"
+                  className="p-2.5 rounded-xl h-auto"
+                  size="sm">
+                  <FadersIcon size={20} />
+                </Button>
+                <Button
+                  variant="primary"
+                  className="p-2.5 rounded-xl h-auto bg-brand-accent hover:bg-brand-accent/90"
+                  size="sm"
+                  onClick={() => setIsCreatingRoute(true)}
+                  title={t('route.create_new')}>
+                  <PlusIcon
+                    size={20}
+                    weight="bold"
+                    className="text-brand-dark"
+                  />
+                </Button>
+              </div>
+            </div>
+
+            {/* Scrollable List */}
+            <div className="flex-1 lg:overflow-y-auto p-4 space-y-4">
+              {filteredTrails.map((trail) => (
+                <div
+                  key={trail.id}
+                  className="hover:scale-[1.01] transition-transform duration-300">
+                  <TrailCard
+                    trail={trail}
+                    onViewDetails={handleViewDetails}
+                    onDelete={
+                      trail.id.startsWith('user-')
+                        ? handleDeleteTrail
+                        : undefined
+                    }
+                  />
+                </div>
+              ))}
+              <div className="text-center py-8 text-brand-muted text-sm">
+                {t('route.showing_count', { count: filteredTrails.length })}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* saját jobb klikk menü */}
-      {contextMenu && (
-        <MapContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onNavFrom={handleNavFrom}
-          onNavTo={handleNavTo}
-          onAddWaypoint={handleAddWaypoint}
-          onClearNav={handleClearNav}
-        />
-      )}
-
-      {/* kiválasztott túra részletei */}
-      {selectedTrail && (
-        <SelectedTrailDetails trail={selectedTrail} pois={pois} map={map} />
-      )}
-
-      <div className="trail-container">
-        {mockTrails.map((trail) => (
-          <TrailCard
-            key={trail.id}
-            trail={trail}
-            onPlan={(id) =>
-              setPlanningTrail({ id: Number(id), name: trail.name })
-            }
-          />
-        ))}
-      </div>
-
-      {planningTrail !== null && (
-        <PlanHikeModal
-          routeId={planningTrail.id}
-          trailName={planningTrail.name}
-          onClose={() => setPlanningTrail(null)}
-        />
-      )}
+      {/* Map Area */}
+      <RouteMap
+        geojson={displayedGeoJson}
+        onRouteCalculated={handleRouteCalculated}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import type { WeatherForecast } from '../types/api';
 import { useApi } from '../hooks/useApi';
-import Button from '../components/Button';
+import { Button } from '../components/ui/Button';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +15,7 @@ function HomePage() {
   } = useApi<WeatherForecast[]>('/api/weatherforecast', { manual: true });
 
   return (
-    <div className="App">
+    <div className="App pt-24">
       <h1>{t('mainMenuH1')}</h1>
       <Button onClick={refetch}>{t('clickHere')}</Button>
       {loading && <LoadingSpinner />}

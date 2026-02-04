@@ -1,5 +1,10 @@
 import React from 'react';
-import { MdLocationOn, MdFlag, MdDelete, MdAddLocation } from 'react-icons/md';
+import {
+  MapPinIcon,
+  FlagIcon,
+  TrashIcon,
+  MapPinPlusIcon,
+} from '@phosphor-icons/react';
 import '../styles/RoutPageStyles.css';
 import { useTranslation } from 'react-i18next';
 
@@ -50,7 +55,12 @@ export default function MapNavigationControls({
         <Button
           onClick={onSelectStartMode}
           isActive={selectionMode === 'start'}
-          icon={<MdLocationOn />}
+          icon={
+            <MapPinIcon
+              size={24}
+              weight={selectionMode === 'start' ? 'fill' : 'regular'}
+            />
+          }
           color="#5cb85c"
           label={t('routePage.navFrom')}
         />
@@ -58,7 +68,12 @@ export default function MapNavigationControls({
         <Button
           onClick={onSelectEndMode}
           isActive={selectionMode === 'end'}
-          icon={<MdFlag />}
+          icon={
+            <FlagIcon
+              size={24}
+              weight={selectionMode === 'end' ? 'fill' : 'regular'}
+            />
+          }
           color="#d9534f"
           label={t('routePage.navTo')}
         />
@@ -66,7 +81,12 @@ export default function MapNavigationControls({
         <Button
           onClick={onSelectWaypointMode}
           isActive={selectionMode === 'waypoint'}
-          icon={<MdAddLocation />}
+          icon={
+            <MapPinPlusIcon
+              size={24}
+              weight={selectionMode === 'waypoint' ? 'fill' : 'regular'}
+            />
+          }
           color="#FF9800"
           label={t('routePage.addWaypoint')}
         />
@@ -75,7 +95,7 @@ export default function MapNavigationControls({
         <Button
           onClick={onClear}
           isActive={false}
-          icon={<MdDelete />}
+          icon={<TrashIcon size={24} />}
           color="#777"
           label={t('routePage.clearNav')}
         />
